@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>SVM Music Genre Classification</title>
+</head>
+<body>
+    <h1>Upload a Music File for SVM Genre Prediction</h1>
+    <form action="/predict" method="post" enctype="multipart/form-data">
+        <label for="file">Select a WAV file:</label>
+        <input type="file" id="file" name="file" accept=".wav" required>
+        <br><br>
+        <button type="submit">Predict Genre</button>
+    </form>
+</body>
+</html>

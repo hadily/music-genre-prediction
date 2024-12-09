@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VGG Upload Audio</title>
+</head>
+<body>
+    <h1>VGG Upload an Audio File</h1>
+    <form action="/vgg19_service" method="POST" enctype="multipart/form-data">
+        <input type="file" name="audio_file" accept="audio/*" required>
+        <button type="submit">Predict Genre</button>
+    </form>
+</body>
+</html>
