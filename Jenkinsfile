@@ -3,7 +3,7 @@ pipeline {
     stages {
         stage('Clone Repository') {
             steps {
-                git 'https://github.com/hadily/music-genre-prediction.git'
+                git branch: 'main', credentialsId: 'bf4702fd-31f2-4085-9abe-46eebd885777', url: 'https://github.com/hadily/music-genre-prediction.git'
             }
         }
         stage('Build Docker Images') {
