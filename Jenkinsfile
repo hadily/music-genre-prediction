@@ -10,21 +10,21 @@ pipeline {
         stage('Build Docker Images') {
             steps {
                 script {
-                    sh 'docker-compose build'
+                    bat 'docker-compose build'
                 }
             }
         }
         stage('Run Containers') {
             steps {
                 script {
-                    sh 'docker-compose up -d'
+                    bat 'docker-compose up -d'
                 }
             }
         }
         stage('Stop Containers') {
             steps {
                 script {
-                    sh 'docker-compose down'
+                    bat 'docker-compose down'
                 }
             }
         }
