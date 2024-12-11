@@ -1,149 +1,67 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Music Genre Prediction</title>
+    <title>Genre Prediction</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <style>
-        /* General Styles */
         body {
-            font-family: 'Arial', sans-serif;
-            background: linear-gradient(to bottom, #f7f7f7, #eaeaea);
-            color: #333;
-            margin: 0;
-            padding: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
+            font-family: Arial, sans-serif;
         }
-
-        h1 {
-            font-size: 2rem;
-            color: #444;
-            margin-bottom: 20px;
-        }
-
-        /* Centered Card */
-        .card {
-            background: #fff;
-            border-radius: 10px;
-            box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
-            padding: 20px;
-            width: 90%;
-            max-width: 400px;
-            text-align: center;
-        }
-
-        /* Input Styles */
-        input[type="file"],
-        select,
-        button {
-            width: 100%;
-            padding: 10px;
-            margin: 10px 0;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            font-size: 1rem;
-        }
-
-        select {
-            background: #f9f9f9;
-        }
-
-        button {
-            background-color: #28a745;
-            color: white;
-            cursor: pointer;
-            border: none;
-            transition: background-color 0.3s ease;
-        }
-
-        button:hover {
-            background-color: #218838;
-        }
-
-        /* Result Box */
         #result {
             margin-top: 20px;
-            padding: 10px;
-            background-color: #f8f9fa;
-            border: 1px solid #dee2e6;
-            border-radius: 5px;
-            font-weight: bold;
-            color: #444;
-        }
-
-        /* Responsive Design */
-        @media (max-width: 600px) {
-            h1 {
-                font-size: 1.5rem;
-            }
-
-            .card {
-                padding: 15px;
-            }
-
-            button {
-                font-size: 0.9rem;
-            }
         }
     </style>
 </head>
-
 <body>
-    <div class="card">
-        <h1>Music Genre Predictor</h1>
-        <form id="predict-form">
-            <input type="file" id="fileInput" accept=".wav" required>
-            <select id="modelSelect" required>
-                <option value="" disabled selected>Choose a Model</option>
-                <option value="svm">SVM</option>
-                <option value="vgg">VGG</option>
-            </select>
-            <button type="submit">Predict Genre</button>
-        </form>
-        <div id="result"></div>
-    </div>
+    <h2>Upload Audio File for Genre Prediction</h2>
+
+    <form id="upload-form" enctype="multipart/form-data">
+        <label for="file">Choose a .wav file:</label>
+        <input type="file" id="file" name="file" accept=".wav" required><br><br>
+        
+        <label for="model">Choose model (SVM or VGG):</label>
+        <select id="model" name="model">
+            <option value="svm">SVM Model</option>
+            <option value="vgg">VGG Model</option>
+        </select><br><br>
+
+        <button type="submit">Predict Genre</button>
+    </form>
+
+    <div id="result"></div>
 
     <script>
-        document.getElementById("predict-form").addEventListener("submit", async (event) => {
-            event.preventDefault();
+        $(document).ready(function() {
+            $('#upload-form').submit(function(event) {
+                event.preventDefault();
 
-            const fileInput = document.getElementById("fileInput");
-            const modelSelect = document.getElementById("modelSelect");
-            const resultDiv = document.getElementById("result");
+                var formData = new FormData(this);
+                var selectedModel = $('#model').val();
+                var predictionUrl = selectedModel === 'svm' ? 'http://127.0.0.1:5000/predict' : 'http://127.0.0.1:5001/predict';
 
-            if (!fileInput.files[0] || !modelSelect.value) {
-                resultDiv.textContent = "Please upload a file and select a model.";
-                return;
-            }
-
-            const formData = new FormData();
-            formData.append("file", fileInput.files[0]);
-
-            const url = modelSelect.value === "svm"
-                ? "http://127.0.0.1:5000/predict"
-                : "http://127.0.0.1:5001/predict";
-
-            try {
-                const response = await fetch(url, {
-                    method: "POST",
-                    body: formData,
+                $.ajax({
+                    url: predictionUrl,
+                    type: 'POST',
+                    data: formData,
+                    contentType: false,
+                    processData: false,
+                    success: function(response) {
+                        if (response.genre) {
+                            $('#result').html('<h3>Predicted Genre: ' + response.genre + '</h3>');
+                        } else if (response.predicted_genre) {
+                            $('#result').html('<h3>Predicted Genre: ' + response.predicted_genre + '</h3>');
+                        } else if (response.error) {
+                            $('#result').html('<h3 style="color: red;">Error: ' + response.error + '</h3>');
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        $('#result').html('<h3 style="color: red;">An error occurred: ' + error + '</h3>');
+                    }
                 });
-
-                if (!response.ok) {
-                    throw new Error(`Server error: ${response.statusText}`);
-                }
-
-                const data = await response.json();
-                resultDiv.textContent = `Predicted Genre: ${data.predicted_genre}`;
-            } catch (error) {
-                resultDiv.textContent = `Error: ${error.message}`;
-            }
+            });
         });
     </script>
 </body>
-
 </html>
