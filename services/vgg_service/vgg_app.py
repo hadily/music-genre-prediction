@@ -1,5 +1,5 @@
-from flask import Flask, request, jsonify
-from flask_cors import CORS  # Import Flask-CORS
+from flask import Flask, request, jsonify, render_template
+from flask_cors import CORS
 import librosa
 import numpy as np
 from tensorflow.keras.models import load_model
@@ -7,10 +7,16 @@ from sklearn.preprocessing import LabelEncoder
 import os
 import unicodedata
 
-app = Flask(_name_)
+app = Flask(__name__)
 CORS(app)  # Enable CORS for the app
-model_path = "./models/vgg19_model.h5" # Configuring the upload folder
-UPLOAD_FOLDER = 'uploads'
+
+@app.route('/')
+def upload_form():
+    return render_template('upload.html')
+
+
+model_path = "./models/vgg19_model.h5"# Configuring the upload folder
+UPLOAD_FOLDER = 'temp'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 # Ensure the upload folder exists
@@ -61,7 +67,7 @@ def safe_file_path(file_path):
     sanitized_path = os.path.normpath(file_path)  # Normalize the file path
     return sanitized_path
 
-@app.route('/predict_vgg', methods=['POST'])
+@app.route('/predict', methods=['POST'])
 def predict():
 
     if 'file' not in request.files:
@@ -98,5 +104,6 @@ def predict():
     else:
         return jsonify({'error': 'Error processing audio file'}), 400
 
-if _name_ == '_main_':
+if __name__ == '__main__':
+    os.makedirs("temp", exist_ok=True)
     app.run(debug=True, host='0.0.0.0', port=5001)
