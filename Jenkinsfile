@@ -1,8 +1,8 @@
 pipeline {
     agent any
-    environment {
-        DOCKER_HUB_CREDS = credentials('dockerhub') // Replace with your Jenkins credential ID
-    }
+    //environment {
+    //    DOCKER_HUB_CREDS = credentials('dockerhub') // Replace with your Jenkins credential ID
+    //}
     stages {
         stage('Clone Repository') {
             steps {
@@ -16,7 +16,7 @@ pipeline {
                 }
             }
         }
-        stage('Login to Docker Hub') {
+        //stage('Login to Docker Hub') {
             steps {
                 script {
                     bat """
@@ -24,8 +24,8 @@ pipeline {
                     """
                 }
             }
-        }
-        stage('Tag and Push Docker Images') {
+        //}
+        //stage('Tag and Push Docker Images') {
             steps {
                 script {
                     bat """
@@ -41,7 +41,7 @@ pipeline {
                     """
                 }
             }
-        }
+        //}
         stage('Run Containers') {
             steps {
                 script {

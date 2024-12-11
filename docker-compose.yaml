@@ -4,7 +4,7 @@ services:
   frontend:
     build:
       context: ./frontend
-    image: didi1702/frontend:latest
+    # image: didi1702/frontend:latest
     ports:
       - "8082:82"
     volumes:
@@ -16,7 +16,7 @@ services:
   svm_flask_app:
     build:
       context: ./services/svm_service
-    image: didi1702/svm-flask-app:latest
+    # image: didi1702/svm-flask-app:latest
     ports:
       - "5000:5000"
     volumes:
@@ -27,7 +27,7 @@ services:
   vgg_flask_app:
     build:
       context: ./services/vgg_service
-    image: didi1702/vgg-flask-app:latest
+    # image: didi1702/vgg-flask-app:latest
     ports:
       - "5001:5001"
     volumes:
