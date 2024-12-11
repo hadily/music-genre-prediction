@@ -1,91 +1,102 @@
-import os
-import numpy as np
+from flask import Flask, request, jsonify
+from flask_cors import CORS  # Import Flask-CORS
 import librosa
-import base64
-import io
-import tensorflow as tf
+import numpy as np
 from tensorflow.keras.models import load_model
-from tensorflow.keras.layers import Input
-from flask import Flask, request, jsonify, render_template
-from flask_cors import CORS
 from sklearn.preprocessing import LabelEncoder
+import os
+import unicodedata
 
+app = Flask(_name_)
+CORS(app)  # Enable CORS for the app
+model_path = "./models/vgg19_model.h5" # Configuring the upload folder
+UPLOAD_FOLDER = 'uploads'
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-# Initialize Flask app
-app = Flask(__name__)
-CORS(app, resources={r"/predict": {"origins": "*"}})
+# Ensure the upload folder exists
+if not os.path.exists(UPLOAD_FOLDER):
+    os.makedirs(UPLOAD_FOLDER)
 
-# Load the pre-trained VGG model
-model_path = './models/vgg_model.h5' 
-#print(f"TensorFlow version: {tf.__version__}")
-vgg_model = tf.keras.models.load_model(model_path)
-#print(f"Model summary: {vgg_model.summary()}")
+# Load the model (make sure the model path is correct)
+model = load_model(model_path)  # Replace with your model path
 
-# Define the list of genres (ensure the order matches LabelEncoder from training)
+# List of genres used during training (replace with your actual genre list)
 genres = ["blues", "classical", "country", "disco", "hiphop", "jazz", "metal", "pop", "reggae", "rock"]
 encoder = LabelEncoder()
 encoder.fit(genres)
 
-# @app.route('/')
-# def upload_form():
-#     return render_template('upload.html')
-
-
-@app.route('/')
-def index():
-    return "Welcome to the Music Genre Prediction App! Use /predict for predictions."
-
-def extract_features(file_data):
-    """
-    Extract features from the audio file for model prediction.
-    - Converts audio to a mel spectrogram.
-    - Resizes the spectrogram to match the trained model's input dimensions.
-    """
+# Function to extract features from the audio file
+def extract_features(file_path):
     try:
-        y, sr = librosa.load(file_data, sr=None)
-        spectrogram = librosa.feature.melspectrogram(y=y, sr=sr)
-        spectrogram = librosa.power_to_db(spectrogram, ref=np.max)
-        
-        if spectrogram.shape[1] < 128:
-            spectrogram = librosa.util.fix_length(spectrogram, size=128, axis=1)
-        else:
-            spectrogram = spectrogram[:, :128]
-        spectrogram = spectrogram[:43, :]
-        spectrogram = spectrogram.reshape(1, 43, 128, 1)
-        return spectrogram
-    except Exception as e:
-        raise ValueError(f"Feature extraction error: {str(e)}")
+        # Load the .wav file using librosa
+        y, sr = librosa.load(file_path, sr=None, mono=True)
+        print(f"Loaded file {file_path} with {y.shape[0]} samples, Sample rate: {sr}")
 
-@app.route('/predict', methods=['POST'])
+        # Extract features (Zero Crossing Rate, Spectral Centroid, etc.)
+        zcr = np.mean(librosa.feature.zero_crossing_rate(y))
+        centroid = np.mean(librosa.feature.spectral_centroid(y=y, sr=sr))
+        rolloff = np.mean(librosa.feature.spectral_rolloff(y=y, sr=sr, roll_percent=0.85))
+        mfcc = np.mean(librosa.feature.mfcc(y=y, sr=sr, n_mfcc=13), axis=1)
+
+        # Return the concatenated feature vector
+        return np.hstack([mfcc, [zcr, centroid, rolloff]])
+    except Exception as e:
+        print(f"Error processing {file_path}: {e}")
+        return None
+
+# Function to sanitize filenames and full path to avoid encoding issues
+def safe_filename(filename):
+    try:
+        # Normalize the filename and remove any non-ASCII characters
+        sanitized_filename = unicodedata.normalize('NFKD', filename).encode('ASCII', 'ignore').decode('ASCII')
+        return sanitized_filename
+    except UnicodeEncodeError as e:
+        print(f"Error sanitizing filename {filename}: {e}")
+        return None
+
+def safe_file_path(file_path):
+    """
+    Ensure the entire path is safe for saving on the system.
+    """
+    sanitized_path = os.path.normpath(file_path)  # Normalize the file path
+    return sanitized_path
+
+@app.route('/predict_vgg', methods=['POST'])
 def predict():
-    """
-    Predict the genre of an uploaded audio file.
-    Accepts an audio file and returns the predicted genre.
-    """
+
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file part'}), 400
+
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({'error': 'No selected file'}), 400
+
+   
+    if not file.filename.endswith('.wav'):
+        return jsonify({'error': 'Only .wav files are supported'}), 400
+
+    
+    safe_filename_value = safe_filename(file.filename)
+    if safe_filename_value is None:
+        return jsonify({'error': 'Error sanitizing filename'}), 400
+
+    file_path = os.path.join(app.config['UPLOAD_FOLDER'], safe_filename_value)
+    file_path = safe_file_path(file_path)
+
     try:
-        # Check for audio file in the request
-        if 'audio' not in request.files:
-            return jsonify({'error': 'No audio file uploaded'}), 400
+        file.save(file_path)
+    except UnicodeEncodeError as e:
+        return jsonify({'error': f"Error saving file: {e}"}), 400
 
-        # Get the audio file from the form-data
-        audio_file = request.files['audio']
-        if audio_file.filename == '':
-            return jsonify({'error': 'No file selected'}), 400
-        
-        # Extract features from the audio file
-        spectrogram = extract_features(audio_file)
-        
-        # Predict the genre using the model
-        predictions = vgg_model.predict(spectrogram)
-        genre_index = np.argmax(predictions, axis=1)[0]
-        genre = genres[genre_index]  # Map index to genre name
+    features = extract_features(file_path)
+    if features is not None:
+        features = features / np.max(features)  
+        features = features.reshape(1, -1)  
+        prediction = model.predict(features)  
+        predicted_genre = encoder.inverse_transform([np.argmax(prediction)])  
+        return jsonify({'predicted_genre': predicted_genre[0]})
+    else:
+        return jsonify({'error': 'Error processing audio file'}), 400
 
-        return jsonify({'genre': genre})
-    except ValueError as ve:
-        return jsonify({'error': str(ve)}), 400
-    except Exception as e:
-        return jsonify({'error': f"An unexpected error occurred: {str(e)}"}), 500
-
-
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5001, debug=True)
+if _name_ == '_main_':
+    app.run(debug=True, host='0.0.0.0', port=5001)

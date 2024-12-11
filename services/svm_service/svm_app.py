@@ -1,94 +1,69 @@
-from flask import Flask, request, jsonify, render_template
-import pickle
-import numpy as np 
-import librosa
 import os
+import pickle
+import librosa
+import numpy as np
+from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
-import logging
-
-logging.basicConfig(level=logging.INFO)
-
-# Get the directory of the current script
-base_dir = os.path.dirname(os.path.abspath(__file__))
-model_path = os.path.join(base_dir, 'models', 'genre_model.pkl')
+import tempfile
 
 app = Flask(__name__)
-CORS(app, resources={r"/predict": {"origins": "*"}})
+CORS(app)
 
-
-# model_path = "./models/genre_model.pkl"
-with open(model_path, 'rb') as f:
-    model = pickle.load(f)
-    # model = f.read()
-
-# @app.route('/', methods=['GET'])
-# def get():
-#    return("hello svm_model")
-
-# @app.route('/')
-# def upload_form():
-#     return render_template('upload.html')
 
 @app.route('/')
-def index():
-    return "Welcome to the Music Genre Prediction App! Use /predict for predictions."
+def upload_form():
+    return render_template('upload.html')
 
-def extract_features(file_path):
-    """Extracts features from the audio file using Mel-spectrogram."""
-    try:
-        y, sr = librosa.load(file_path, mono=True)
+model_path = "./models/genre_model.pkl"
+
+# Define a custom temp directory where the Flask app has write permissions
+TEMP_DIR = './temp'
+
+# Function to extract Mel spectrogram features
+def extractMelSpectrogram_features(file_bytes):
+    # Create a temporary file in the custom temp directory
+    with tempfile.NamedTemporaryFile(suffix=".wav", delete=False, dir=TEMP_DIR) as temp_file:
+        temp_file.write(file_bytes)
+        temp_file.flush()
+        signal, rate = librosa.load(temp_file.name, sr=None)
     
-        # Generate Mel-spectrogram with reduced number of mel bins to match the expected feature size
-        mel_spec = librosa.feature.melspectrogram(y=y, sr=sr, n_mels=40, fmax=8000)  # Reduce n_mels to 40
-        
-        # Convert to decibels
-        mel_spec_db = librosa.power_to_db(mel_spec, ref=np.max)
-        
-        # If necessary, downsample the spectrogram to reduce the feature vector length
-        # Flatten the spectrogram to create a feature vector
-        mel_spec_db_flattened = mel_spec_db.flatten()
-        
-        # If the flattened vector has more than 1280 features, trim it; if less, pad it
-        target_size = 1280
-        if len(mel_spec_db_flattened) > target_size:
-            mel_spec_db_flattened = mel_spec_db_flattened[:target_size]
-        elif len(mel_spec_db_flattened) < target_size:
-            mel_spec_db_flattened = np.pad(mel_spec_db_flattened, (0, target_size - len(mel_spec_db_flattened)), 'constant')
-    
-        return mel_spec_db_flattened
-    except Exception as e:
-        print(f"Error during feature extraction: {e}")
-        raise
+    hop_length = 512
+    n_fft = 2048
+    n_mels = 128
+    S = librosa.feature.melspectrogram(y=signal, sr=rate, n_fft=n_fft, hop_length=hop_length, n_mels=n_mels)
+    S_DB = librosa.power_to_db(S, ref=np.max).flatten()[:1280]
+    return S_DB
+
+def predict_genre(file_bytes, clf):
+    mel_features = extractMelSpectrogram_features(file_bytes)
+    genre_label = clf.predict([mel_features])[0]  # Assuming this directly gives the genre name
+    return genre_label  # No need to use index anymore
+
+try:
+    with open(model_path, 'rb') as f:
+        clf = pickle.load(f)
+except Exception as e:
+    print(f"Error loading model: {e}")
+    exit(1)
 
 @app.route('/predict', methods=['POST'])
-def predict_genre():
-    if 'file' not in request.files:
-        return jsonify({'error': 'No file part'}), 400
-
-    file = request.files['file']
-    if file.filename == '':
-        return jsonify({'error': 'No selected file'}), 400
-
-    os.makedirs("temp", exist_ok=True)
-    file_path = os.path.join("temp", file.filename)
-
-    try:
-        file.save(file_path)
-        features = extract_features(file_path)
-        os.remove(file_path)  # Cleanup temporary file
-
-        prediction = model.predict([features])
-        genre = prediction[0]
-        if isinstance(genre, (np.generic, np.ndarray)):
-            genre = genre.item()  # Ensure it's JSON serializable
-
-        return jsonify({'genre': genre})
+def predict():
+    # Extract the file from the incoming request
+    file = request.files.get('file')  # Assuming 'file' is the name of the input field in the HTML form
     
+    if not file:
+        return jsonify({"error": "No file provided"}), 400
+
+    # Read the file as bytes
+    file_bytes = file.read()
+
+    # Call the predict_genre function with the file bytes and the clf model
+    try:
+        genre = predict_genre(file_bytes, clf)
+        return jsonify({"genre": genre}), 200
     except Exception as e:
-        print(f"Error during prediction: {e}")  # Log the error
-        return jsonify({'error': 'An error occurred during processing.', 'details': str(e)}), 500
+        return jsonify({"error": str(e)}), 500
 
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     os.makedirs("temp", exist_ok=True)
     app.run(debug=True, host="0.0.0.0", port=5000)
