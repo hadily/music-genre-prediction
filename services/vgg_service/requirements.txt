@@ -7,3 +7,4 @@ h5py
 flask-cors
 librosa
 tensorflow
+pytest
