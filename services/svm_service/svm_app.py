@@ -4,6 +4,9 @@ import numpy as np
 import librosa
 import os
 from flask_cors import CORS
+import logging
+
+logging.basicConfig(level=logging.INFO)
 
 # Get the directory of the current script
 base_dir = os.path.dirname(os.path.abspath(__file__))
@@ -15,8 +18,8 @@ CORS(app, resources={r"/predict": {"origins": "*"}})
 
 # model_path = "./models/genre_model.pkl"
 with open(model_path, 'rb') as f:
-    # model = pickle.load(f)
-    model = f.read()
+    model = pickle.load(f)
+    # model = f.read()
 
 # @app.route('/', methods=['GET'])
 # def get():
@@ -65,35 +68,27 @@ def predict_genre():
     file = request.files['file']
     if file.filename == '':
         return jsonify({'error': 'No selected file'}), 400
-    
-    # print(f"Received file: {file.filename}")  # Log file name
-    
-    # Save the file temporarily
+
+    os.makedirs("temp", exist_ok=True)
     file_path = os.path.join("temp", file.filename)
-    #os.makedirs("temp", exist_ok=True)
 
-    # print(f"Saved file at: {file_path}")  # Log the file path
-    
-    try:        
+    try:
         file.save(file_path)
-
-        # Process the audio file and extract features
         features = extract_features(file_path)
-        os.remove(file_path)  # Remove the temp file after processing
-        
-        print(f"Extracted features: {features[:10]}")  # Log extracted features
-        
-        # Make prediction using the model
+        os.remove(file_path)  # Cleanup temporary file
+
         prediction = model.predict([features])
         genre = prediction[0]
-        
-        return {'genre': genre}
+        if isinstance(genre, (np.generic, np.ndarray)):
+            genre = genre.item()  # Ensure it's JSON serializable
+
+        return jsonify({'genre': genre})
     
     except Exception as e:
         print(f"Error during prediction: {e}")  # Log the error
-        return jsonify({'error': 'An error occurred during processing.'}, {e}), 500
+        return jsonify({'error': 'An error occurred during processing.', 'details': str(e)}), 500
 
 
 if __name__ == '__main__':
-    # os.makedirs("temp", exist_ok=True)
+    os.makedirs("temp", exist_ok=True)
     app.run(debug=True, host="0.0.0.0", port=5000)
