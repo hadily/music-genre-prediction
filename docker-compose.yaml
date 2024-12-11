@@ -4,6 +4,7 @@ services:
   frontend:
     build:
       context: ./frontend
+    image: didi1702/frontend:latest
     ports:
       - "8082:82"
     volumes:
@@ -11,18 +12,22 @@ services:
     depends_on:
       - svm_flask_app
       - vgg_flask_app
+
   svm_flask_app:
     build:
       context: ./services/svm_service
+    image: didi1702/svm-flask-app:latest
     ports:
       - "5000:5000"
     volumes:
       - ./services/svm_service/models/svm_model.pkl:/app/svm_model.pkl
     environment:
       - MODEL_PATH=/app/genre_model.pkl
+      
   vgg_flask_app:
     build:
       context: ./services/vgg_service
+    image: didi1702/vgg-flask-app:latest
     ports:
       - "5001:5001"
     volumes:

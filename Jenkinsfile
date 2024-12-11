@@ -1,9 +1,11 @@
 pipeline {
     agent any
+    environment {
+        DOCKER_HUB_CREDS = credentials('dockerhub') // Replace with your Jenkins credential ID
+    }
     stages {
         stage('Clone Repository') {
             steps {
-                // git branch: 'main', credentialsId: 'bf4702fd-31f2-4085-9abe-46eebd885777', url: 'https://github.com/hadily/music-genre-prediction.git'
                 git branch: 'main', url: 'https://github.com/hadily/music-genre-prediction.git'
             }
         }
@@ -14,34 +16,32 @@ pipeline {
                 }
             }
         }
-        // stage('Upload to Docker Hub') {
-        //     environment {
-        //         DOCKER_HUB_CREDS = credentials('dockerhub')
-        //     }
-        //     steps {
-        //         script {
-        //             def dockerImage = "your-dockerhub-username/your-repo-name:latest"
-// 
-        //             // Log in to Docker Hub
-        //             sh """
-        //             echo ${DOCKER_HUB_CREDS_PSW} | docker login -u ${DOCKER_HUB_CREDS_USR} --password-stdin
-        //             """
-// 
-        //             // Tag the image
-        //             sh """
-        //             docker tag your-local-image-name ${dockerImage}
-        //             """
-// 
-        //             // Push the image to Docker Hub
-        //             sh """
-        //             docker push ${dockerImage}
-        //             """
-// 
-        //             // Optionally log out of Docker Hub
-        //             sh "docker logout"
-        //         }
-        //     }
-        // }
+        stage('Login to Docker Hub') {
+            steps {
+                script {
+                    bat """
+                    echo ${DOCKER_HUB_CREDS_PSW} | docker login -u ${DOCKER_HUB_CREDS_USR} --password-stdin
+                    """
+                }
+            }
+        }
+        stage('Tag and Push Docker Images') {
+            steps {
+                script {
+                    bat """
+                    docker tag didi1702/frontend:latest ${DOCKER_HUB_CREDS_USR}/frontend:latest
+                    docker tag didi1702/svm-flask-app:latest ${DOCKER_HUB_CREDS_USR}/svm-flask-app:latest
+                    docker tag didi1702/vgg-flask-app:latest ${DOCKER_HUB_CREDS_USR}/vgg-flask-app:latest
+                    """
+
+                    bat """
+                    docker push ${DOCKER_HUB_CREDS_USR}/frontend:latest
+                    docker push ${DOCKER_HUB_CREDS_USR}/svm-flask-app:latest
+                    docker push ${DOCKER_HUB_CREDS_USR}/vgg-flask-app:latest
+                    """
+                }
+            }
+        }
         stage('Run Containers') {
             steps {
                 script {
@@ -49,17 +49,13 @@ pipeline {
                 }
             }
         }
-        // stage('Run Tests') {
+        // Optionally, you can add a 'Stop Containers' stage if you need to tear down containers after running
+        // stage('Stop Containers') {
         //     steps {
-        //         sh 'pytest tests/'
+        //         script {
+        //             bat 'docker-compose down'
+        //         }
         //     }
         // }
-        //stage('Stop Containers') {
-        //    steps {
-        //        script {
-        //            bat 'docker-compose down'
-        //        }
-        //    }
-        //}
     }
 }
