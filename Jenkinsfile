@@ -20,10 +20,11 @@ pipeline {
                 }
             }
         }
-        stage('Install Pytest') {
+        stage('Installing dependencies') {
             steps {
                 script {
                     bat 'pip install pytest'
+                    bat 'pip install pytest librosa'
                 }
             }
         }
