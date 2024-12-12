@@ -20,6 +20,13 @@ pipeline {
                 }
             }
         }
+        stage('Install Pytest') {
+            steps {
+                script {
+                    bat 'pip install pytest'
+                }
+            }
+        }
         stage('Test SVM Model') {
             steps {
                 script {
