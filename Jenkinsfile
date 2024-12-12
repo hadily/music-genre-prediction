@@ -23,7 +23,7 @@ pipeline {
         stage('Test SVM Model') {
             steps {
                 script {
-                    bat 'pytest services\svm_service\test_svm_app.py'
+                    bat 'pytest services/svm_service/test_svm_app.py'
                 }
             }
         }
