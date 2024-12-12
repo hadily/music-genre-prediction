@@ -20,6 +20,20 @@ pipeline {
                 }
             }
         }
+        stage('Test SVM Model') {
+            steps {
+                script {
+                    bat 'pytest services\svm_service\test_svm_app.py'
+                }
+            }
+        }
+        stage('Test VGG Model') {
+            steps {
+                script {
+                    bat 'pytest services\vgg_service\test_vgg_app.py'
+                }
+            }
+        }
         // stage('Stop Containers') {
         //     steps {
         //         script {
