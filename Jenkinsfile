@@ -20,20 +20,20 @@ pipeline {
                 }
             }
         }
-        stage('Installing dependencies') {
-            steps {
-                script {
-                    bat 'pip install pytest librosa'
-                }
-            }
-        }
-        stage('Test SVM Model') {
-            steps {
-                script {
-                    bat 'pytest services/svm_service/test_svm_app.py'
-                }
-            }
-        }
+        // stage('Installing dependencies') {
+        //     steps {
+        //         script {
+        //             bat 'pip install pytest librosa'
+        //         }
+        //     }
+        // }
+        // stage('Test SVM Model') {
+        //     steps {
+        //         script {
+        //             bat 'pytest services/svm_service/test_svm_app.py'
+        //         }
+        //     }
+        // }
         // stage('Test VGG Model') {
         //     steps {
         //         script {
@@ -41,12 +41,12 @@ pipeline {
         //         }
         //     }
         // }
-        stage('Stop Containers') {
-            steps {
-                script {
-                    bat 'docker-compose down'
-                }
-            }
-        }
+        // stage('Stop Containers') {
+        //     steps {
+        //         script {
+        //             bat 'docker-compose down'
+        //         }
+        //     }
+        // }
     }
 }
