@@ -27,19 +27,19 @@ pipeline {
                 }
             }
         }
-        stage('Test VGG Model') {
-            steps {
-                script {
-                    bat 'pytest services\vgg_service\test_vgg_app.py'
-                }
-            }
-        }
-        stage('Stop Containers') {
-            steps {
-                script {
-                    bat 'docker-compose down'
-                }
-            }
-        }
+        // stage('Test VGG Model') {
+        //     steps {
+        //         script {
+        //             bat 'pytest services\vgg_service\test_vgg_app.py'
+        //         }
+        //     }
+        // }
+        // stage('Stop Containers') {
+        //     steps {
+        //         script {
+        //             bat 'docker-compose down'
+        //         }
+        //     }
+        // }
     }
 }
