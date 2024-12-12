@@ -42,12 +42,12 @@ pipeline {
         //         }
         //     }
         // }
-        // stage('Stop Containers') {
-        //     steps {
-        //         script {
-        //             bat 'docker-compose down'
-        //         }
-        //     }
-        // }
+        stage('Stop Containers') {
+            steps {
+                script {
+                    bat 'docker-compose down'
+                }
+            }
+        }
     }
 }
